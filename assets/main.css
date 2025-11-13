@@ -12,7 +12,7 @@
 body {
   margin: 0;
   min-height: 100vh;
-  background: radial-gradient(circle at 20% 20%, #2d3f72, #101a33 65%);
+  background: #1a1f2e;
   color: #f5f7ff;
   overflow: hidden;
 }
@@ -104,26 +104,28 @@ body > canvas {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(140deg, rgba(91, 160, 255, 0.9), rgba(59, 130, 246, 0.9));
-  border: 1px solid rgba(91, 160, 255, 0.4);
+  background: #3b82f6;
+  border: 1px solid #2563eb;
   border-radius: 12px;
-  color: #f8fbff;
+  color: #ffffff;
   font-weight: 600;
   font-size: 0.95rem;
   letter-spacing: 0.04em;
   cursor: pointer;
-  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.3);
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
   transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.2s ease;
 }
 
 .digit-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 28px rgba(59, 130, 246, 0.4);
+  background: #2563eb;
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
 }
 
 .digit-button:active {
-  transform: translateY(1px);
-  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.35);
+  transform: translateY(0);
+  background: #1d4ed8;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.35);
 }
 
 .reset-button-container {
@@ -135,21 +137,22 @@ body > canvas {
 
 #resetBtn {
   pointer-events: auto;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  color: #f8fbff;
+  background: #ef4444;
+  color: #ffffff;
   border: none;
   border-radius: 50%;
   width: 46px;
   height: 46px;
   font-size: 22px;
   cursor: pointer;
-  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.35);
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.2s ease;
 }
 
 #resetBtn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 18px 36px rgba(59, 130, 246, 0.45);
+  transform: translateY(-2px);
+  background: #dc2626;
+  box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
 }
 
 .prediction-overlay {
@@ -385,14 +388,14 @@ body > canvas {
   height: 100%;
   width: 0%;
   border-radius: inherit;
-  background: linear-gradient(135deg, #0ea5e9, #3b82f6);
-  box-shadow: 0 0 12px rgba(14, 165, 233, 0.45);
+  background: #3b82f6;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
   transition: width 280ms ease;
 }
 
 .prediction-bar.highest {
-  background: linear-gradient(135deg, #34d399, #10b981);
-  box-shadow: 0 0 16px rgba(16, 185, 129, 0.55);
+  background: #10b981;
+  box-shadow: 0 0 12px rgba(16, 185, 129, 0.5);
 }
 
 .prediction-percentage {
@@ -590,7 +593,7 @@ body > canvas {
 
 .advanced-settings-button {
   border-color: rgba(91, 160, 255, 0.45);
-  background: linear-gradient(135deg, rgba(16, 27, 48, 0.96), rgba(9, 15, 32, 0.92));
+  background: rgba(30, 41, 59, 0.95);
   color: rgba(180, 205, 255, 0.9);
 }
 
@@ -667,9 +670,9 @@ body > canvas {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6, #60a5fa);
-  border: 1px solid rgba(91, 160, 255, 0.55);
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.45);
+  background: #3b82f6;
+  border: 1px solid #2563eb;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
   cursor: pointer;
 }
 
@@ -677,9 +680,9 @@ body > canvas {
   width: 18px;
   height: 18px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #3b82f6, #60a5fa);
-  border: 1px solid rgba(91, 160, 255, 0.55);
-  box-shadow: 0 0 12px rgba(59, 130, 246, 0.45);
+  background: #3b82f6;
+  border: 1px solid #2563eb;
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
   cursor: pointer;
 }
 
@@ -736,7 +739,7 @@ body > canvas {
 .info-modal-content {
   max-width: 720px;
   width: 100%;
-  background: radial-gradient(circle at top left, rgba(36, 54, 94, 0.95), rgba(10, 16, 30, 0.95));
+  background: rgba(30, 41, 59, 0.98);
   border: 1px solid rgba(91, 160, 255, 0.35);
   border-radius: 24px;
   padding: 24px 28px;
@@ -812,7 +815,7 @@ body > canvas {
 
 .advanced-modal-content {
   width: min(360px, 90vw);
-  background: radial-gradient(circle at top right, rgba(30, 45, 82, 0.97), rgba(10, 16, 30, 0.95));
+  background: rgba(30, 41, 59, 0.98);
   border: 1px solid rgba(91, 160, 255, 0.32);
   border-radius: 22px;
   padding: 22px 24px;

@@ -23,7 +23,7 @@ const MNIST_SAMPLE_MANIFEST_URL = "./assets/data/mnist-test-manifest.json";
 document.addEventListener("DOMContentLoaded", () => {
   initializeVisualizer().catch((error) => {
     console.error(error);
-    renderErrorMessage("Visualisierung konnte nicht initialisiert werden. Details finden Sie in der Konsole.");
+    renderErrorMessage("Visualization could not be initialized. Check the console for details.");
   });
 });
 
@@ -31,7 +31,7 @@ async function loadMnistTestSamples(manifestPath = MNIST_SAMPLE_MANIFEST_URL) {
   const manifestUrl = new URL(manifestPath, window.location.href);
   const manifestResponse = await fetch(manifestUrl.toString());
   if (!manifestResponse.ok) {
-    throw new Error(`Konnte MNIST-Manifest nicht laden (${manifestResponse.status}).`);
+    throw new Error(`Could not load MNIST manifest (${manifestResponse.status}).`);
   }
   const manifest = await manifestResponse.json();
   const rows = Number(manifest?.imageShape?.[0]) || 28;
@@ -41,19 +41,19 @@ async function loadMnistTestSamples(manifestPath = MNIST_SAMPLE_MANIFEST_URL) {
   const imageFile = manifest?.image?.file;
   const labelFile = manifest?.labels?.file;
   if (!imageFile || !labelFile) {
-    throw new Error("Manifest enthält keine gültigen Dateipfade für Bilder oder Labels.");
+    throw new Error("Manifest contains no valid file paths for images or labels.");
   }
 
   const [imageBuffer, labelBuffer] = await Promise.all([
     fetch(new URL(imageFile, manifestUrl).toString()).then((response) => {
       if (!response.ok) {
-        throw new Error(`Konnte MNIST-Bilddaten nicht laden (${response.status}).`);
+        throw new Error(`Could not load MNIST image data (${response.status}).`);
       }
       return response.arrayBuffer();
     }),
     fetch(new URL(labelFile, manifestUrl).toString()).then((response) => {
       if (!response.ok) {
-        throw new Error(`Konnte MNIST-Labeldaten nicht laden (${response.status}).`);
+        throw new Error(`Could not load MNIST label data (${response.status}).`);
       }
       return response.arrayBuffer();
     }),
@@ -65,22 +65,22 @@ async function loadMnistTestSamples(manifestPath = MNIST_SAMPLE_MANIFEST_URL) {
     if (sampleSize > 0) {
       const inferredSamples = Math.floor(imageBytes.length / sampleSize);
       if (inferredSamples <= 0) {
-        throw new Error("Aus den MNIST-Bilddaten konnte keine Stichprobengröße abgeleitet werden.");
+        throw new Error("Could not derive sample size from MNIST image data.");
       }
       if (labelBytes.length !== inferredSamples) {
-        throw new Error("Anzahl der Labels stimmt nicht mit den abgeleiteten Stichproben überein.");
+        throw new Error("Number of labels does not match the derived samples.");
       }
     } else {
-      throw new Error("Manifest enthält keine gültige Stichprobengröße.");
+      throw new Error("Manifest does not contain a valid sample size.");
     }
   }
 
   const totalSamples = numSamples > 0 ? numSamples : Math.floor(imageBytes.length / sampleSize);
   if (imageBytes.length !== totalSamples * sampleSize) {
-    throw new Error("MNIST-Bilddatenlänge stimmt nicht mit der erwarteten Größe überein.");
+    throw new Error("MNIST image data length does not match expected size.");
   }
   if (labelBytes.length !== totalSamples) {
-    throw new Error("MNIST-Labeldatenlänge stimmt nicht mit der erwarteten Größe überein.");
+    throw new Error("MNIST label data length does not match expected size.");
   }
 
   const digitBuckets = Array.from({ length: 10 }, () => []);
@@ -141,7 +141,7 @@ async function setupMnistSampleButtons({ digitCanvas, onSampleApplied, manifestP
   try {
     loader = await loadMnistTestSamples(manifestPath ?? MNIST_SAMPLE_MANIFEST_URL);
   } catch (error) {
-    console.warn("MNIST-Testdaten konnten nicht geladen werden:", error);
+    console.warn("Could not load MNIST test data:", error);
     return null;
   }
   const column = document.createElement("div");
@@ -151,7 +151,7 @@ async function setupMnistSampleButtons({ digitCanvas, onSampleApplied, manifestP
     button.type = "button";
     button.className = "digit-button";
     button.textContent = String(digit);
-    button.setAttribute("aria-label", `Zufällige ${digit} laden`);
+    button.setAttribute("aria-label", `Load random ${digit}`);
     button.addEventListener("click", () => {
       const sample = loader.getRandomSample(digit);
       if (!sample) return;
@@ -664,7 +664,7 @@ function initializeAdvancedSettings({ neuralScene, digitCanvas, onConnectionsSet
 async function fetchNetworkDefinition(url) {
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) {
-    throw new Error(`Netzwerkgewichte konnten nicht geladen werden (${response.status})`);
+    throw new Error(`Could not load network weights (${response.status})`);
   }
   return response.json();
 }
@@ -681,7 +681,7 @@ function resolveRelativeUrl(base, relativePath) {
     const baseUrl = base instanceof URL ? base : new URL(base, window.location.href);
     return new URL(relativePath, baseUrl).toString();
   } catch (error) {
-    console.warn("Konnte relative URL nicht auflösen:", relativePath, error);
+    console.warn("Could not resolve relative URL:", relativePath, error);
     return null;
   }
 }
@@ -699,7 +699,7 @@ function decodeBase64ToUint8Array(base64) {
   if (typeof Buffer === "function") {
     return Uint8Array.from(Buffer.from(base64, "base64"));
   }
-  throw new Error("Base64-Dekodierung ist in dieser Umgebung nicht verfügbar.");
+  throw new Error("Base64 decoding is not available in this environment.");
 }
 
 function float16ToFloat32(value) {
@@ -726,13 +726,13 @@ function float16ToFloat32(value) {
 function decodeFloat16Base64(base64, expectedLength) {
   const bytes = decodeBase64ToUint8Array(base64);
   if (bytes.byteLength % 2 !== 0) {
-    throw new Error("Float16-Daten haben eine ungültige Länge.");
+    throw new Error("Float16 data has an invalid length.");
   }
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
   const length = bytes.byteLength / 2;
   if (Number.isFinite(expectedLength) && expectedLength > 0 && length !== expectedLength) {
     throw new Error(
-      `Erwartete ${expectedLength} Float16-Werte, erhalten wurden jedoch ${length}.`,
+      `Expected ${expectedLength} Float16 values, but received ${length}.`,
     );
   }
   const result = new Float32Array(length);
@@ -798,14 +798,14 @@ function normaliseWeightsDescriptor(descriptor, baseUrl) {
 async function fetchSnapshotPayload(url) {
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) {
-    throw new Error(`Snapshot konnte nicht geladen werden (${response.status})`);
+    throw new Error(`Could not load snapshot (${response.status})`);
   }
   return response.json();
 }
 
 function decodeSnapshotLayers(payload, layerMetadata) {
   if (!payload || typeof payload !== "object" || !Array.isArray(payload.layers)) {
-    throw new Error("Snapshot-Datei enthält keine gültigen Layerdaten.");
+    throw new Error("Snapshot file contains no valid layer data.");
   }
 
   return layerMetadata.map((meta, index) => {
@@ -813,21 +813,21 @@ function decodeSnapshotLayers(payload, layerMetadata) {
       payload.layers[index] ??
       payload.layers.find((layer) => Number(layer?.layer_index) === meta.layerIndex);
     if (!layerPayload) {
-      throw new Error(`Snapshot fehlt Layer ${meta.layerIndex}.`);
+      throw new Error(`Snapshot is missing layer ${meta.layerIndex}.`);
     }
     const weightsInfo = layerPayload.weights ?? {};
     const biasesInfo = layerPayload.biases ?? {};
     if (typeof weightsInfo.data !== "string" || typeof biasesInfo.data !== "string") {
-      throw new Error("Snapshot-Layer enthält keine kodierten Gewichte.");
+      throw new Error("Snapshot layer contains no encoded weights.");
     }
 
     const weightShape = normaliseShape(weightsInfo.shape, meta.weightShape);
     const biasShape = normaliseShape(biasesInfo.shape, meta.biasShape);
     if (weightShape.length !== 2) {
-      throw new Error("Snapshot-Layer hat eine ungültige Gewichtsdimension.");
+      throw new Error("Snapshot layer has an invalid weight dimension.");
     }
     if (biasShape.length === 0) {
-      throw new Error("Snapshot-Layer hat eine ungültige Bias-Dimension.");
+      throw new Error("Snapshot layer has an invalid bias dimension.");
     }
 
     const weights = decodeWeightMatrix(weightsInfo.data, weightShape);

@@ -1,27 +1,27 @@
-# Neural Network Visualizer 🧠✨
+# Neural Network Visualizer
 
 **Interactive 3D visualization of neural networks performing MNIST handwritten digit recognition in real-time.**
 
 Draw digits and watch activations flow through the network layers in beautiful 3D!
 
-> This is a complete clone of [DFin/Neural-Network-Visualisation](https://github.com/Ramakm/NN-visualizer) with **100% identical functionality** and enhanced documentation.
+> This project is inspired from [DFin/Neural-Network-Visualisation](https://github.com/Ramakm/NN-visualizer) with enhanced documentation & functionalities which is gonna be added.
 
 ![Neural Network Visualization](https://img.shields.io/badge/Status-Active-success)
 ![License](https://img.shields.io/badge/License-MIT-blue)
 ![Python](https://img.shields.io/badge/Python-3.8+-blue)
 ![Three.js](https://img.shields.io/badge/Three.js-r128-orange)
 
-## ✨ Features
+## Features
 
-- **🎨 Interactive Drawing Canvas**: Draw digits on a 28×28 grid with mouse controls
-- **🌐 Real-time 3D Visualization**: Watch neural activations flow through network layers
-- **📊 Live Predictions**: See probability distributions for all digit classes
-- **⚙️ Customizable Settings**: Adjust visualization parameters in real-time
-- **🎯 Pre-trained Samples**: Quick-test with sample digits
-- **📱 Responsive Design**: Works on desktop and mobile devices
-- **🚀 Hardware Acceleration**: Supports Apple Metal (MPS), CUDA, and CPU
+- **Interactive Drawing Canvas**: Draw digits on a 28×28 grid with mouse controls
+- **Real-time 3D Visualization**: Watch neural activations flow through network layers
+- **Live Predictions**: See probability distributions for all digit classes
+- **Customizable Settings**: Adjust visualization parameters in real-time
+- **Pre-trained Samples**: Quick-test with sample digits
+- **Responsive Design**: Works on desktop and mobile devices
+- **Hardware Acceleration**: Supports Apple Metal (MPS), CUDA, and CPU
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -56,7 +56,7 @@ Draw digits and watch activations flow through the network layers in beautiful 3
    http://localhost:8000
    ```
 
-## 🎓 Training Your Own Model
+## Training Your Own Model
 
 The visualizer comes with a training script to create custom models:
 
@@ -82,17 +82,17 @@ python training/mlp_train.py \
 
 ### Example Training Output
 
-```
-🚀 Using device: mps
+```bash
+Using device: mps
 
-📥 Loading MNIST dataset...
+Loading MNIST dataset...
   - Training samples: 60,000
   - Test samples: 10,000
 
-🏗️  Building model with architecture: 784 → 64 → 32 → 10
+Building model with architecture: 784 → 64 → 32 → 10
   - Total parameters: 51,946
 
-🎯 Training for 10 epochs...
+Training for 10 epochs...
 
 Epoch 1/10
 ----------------------------------------------------------
@@ -100,15 +100,15 @@ Epoch 1/10
   ...
   Train - Loss: 0.3421 | Accuracy: 89.45%
   Test  - Loss: 0.2156 | Accuracy: 93.67%
-  ✨ New best accuracy: 93.67%
+  New best accuracy: 93.67%
 
 ...
 
-✅ Training complete!
+Training complete!
   - Best test accuracy: 97.82%
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 NN-visualizer/
@@ -124,7 +124,7 @@ NN-visualizer/
 └── README.md              # This file
 ```
 
-## 🎨 Architecture
+## Architecture
 
 ### Default Network
 
@@ -150,7 +150,7 @@ python training/mlp_train.py --hidden-dims 32 16
 python training/mlp_train.py --hidden-dims 128 64 64 32
 ```
 
-## 🎮 How to Use
+## How to Use
 
 ### Drawing
 
@@ -170,7 +170,7 @@ Click any number button (0-9) to load a sample digit for quick testing.
 
 ### Advanced Settings
 
-Click the settings icon (⚙️) to adjust:
+Click the settings icon to adjust:
 
 - **Max Connections Per Neuron**: Visualization detail level
 - **Connection Weight Threshold**: Hide weak connections
@@ -178,7 +178,7 @@ Click the settings icon (⚙️) to adjust:
 - **Drawing Brush Size**: Canvas drawing size
 - **Drawing Intensity**: Stroke opacity
 
-## 🎨 Color Coding
+## Color Coding
 
 ### Neurons
 
@@ -191,7 +191,7 @@ Click the settings icon (⚙️) to adjust:
 - **Intensity**: Represents weight magnitude
 - **Color gradient**: Shows contribution strength
 
-## 🔧 Technical Details
+## Technical Details
 
 ### Frontend
 
@@ -214,35 +214,35 @@ Click the settings icon (⚙️) to adjust:
 - Safari 14+
 - Edge 90+
 
-## 📊 Performance
+## Performance
 
 - **Training**: 2-5 minutes on Apple M1/M2
 - **Inference**: Real-time (<16ms per frame)
 - **Memory**: ~100MB for visualization
 
-## 🤝 Contributing
+## Contributing
 
 Contributions are welcome! Here are some ways you can help:
 
-- 🐛 Report bugs
-- 💡 Suggest features
-- 🔧 Submit pull requests
-- 📖 Improve documentation
+- Report bugs
+- Suggest features
+- Submit pull requests
+- Improve documentation
 
-## 📝 License
+## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - Original concept inspired by [DFin/Neural-Network-Visualisation](https://github.com/Ramakm/NN-visualizer)
 - MNIST dataset by Yann LeCun
 - Three.js community
 
-## 📧 Contact
+## Contact
 
 For questions or feedback, please open an issue on GitHub.
 
 ---
 
-**Made with ❤️ for education and learning**
+**Made with care for education and learning**

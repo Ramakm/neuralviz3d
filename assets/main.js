@@ -187,7 +187,38 @@ async function initializeVisualizer() {
   }
   const defaultSnapshotIndex = Math.max(timelineSnapshots.length - 1, 0);
   const initialSnapshot = timelineSnapshots[defaultSnapshotIndex];
-  const initialLayers = await initialSnapshot.loadLayers();
+
+  // Attempt to load snapshot layers; if snapshot files are missing or fail to load
+  // create a minimal zero-initialized fallback from the network metadata so the
+  // visualizer can still initialize instead of throwing a fatal error.
+  let initialLayers;
+  try {
+    initialLayers = await initialSnapshot.loadLayers();
+  } catch (err) {
+    console.warn("Could not load snapshot layers, falling back to zeroed layers:", err);
+    const metaLayers = Array.isArray(definition.network.layers)
+      ? definition.network.layers
+      : [];
+    initialLayers = metaLayers.map((layerMeta, idx) => {
+      const weightShape = Array.isArray(layerMeta?.weight_shape) ? layerMeta.weight_shape.slice() : [];
+      const biasShape = Array.isArray(layerMeta?.bias_shape) ? layerMeta.bias_shape.slice() : [];
+      const rows = Math.max(0, Number(weightShape[0]) || 0);
+      const cols = Math.max(0, Number(weightShape[1]) || 0);
+      const biasLen = Math.max(0, Number(biasShape[0]) || rows);
+      const weights = [];
+      for (let r = 0; r < rows; r += 1) {
+        const row = new Float32Array(cols);
+        weights.push(row);
+      }
+      const biases = new Float32Array(biasLen);
+      return {
+        name: typeof layerMeta?.name === "string" ? layerMeta.name : `dense_${idx}`,
+        activation: typeof layerMeta?.activation === "string" ? layerMeta.activation : "relu",
+        weights,
+        biases,
+      };
+    });
+  }
 
   const neuralModel = new FeedForwardModel({
     normalization: definition.network.normalization,
@@ -310,7 +341,31 @@ async function initializeVisualizer() {
   const timelineController = setupTimelineSlider(timelineSnapshots, {
     async onSnapshotChange(snapshot) {
       if (!snapshot) return;
-      const layers = await snapshot.loadLayers();
+      let layers;
+      try {
+        layers = await snapshot.loadLayers();
+      } catch (err) {
+        console.warn("Failed to load snapshot, using fallback zeroed layers:", err);
+        const metaLayers = Array.isArray(definition.network.layers) ? definition.network.layers : [];
+        layers = metaLayers.map((layerMeta, idx) => {
+          const weightShape = Array.isArray(layerMeta?.weight_shape) ? layerMeta.weight_shape.slice() : [];
+          const biasShape = Array.isArray(layerMeta?.bias_shape) ? layerMeta.bias_shape.slice() : [];
+          const rows = Math.max(0, Number(weightShape[0]) || 0);
+          const cols = Math.max(0, Number(weightShape[1]) || 0);
+          const biasLen = Math.max(0, Number(biasShape[0]) || rows);
+          const weights = [];
+          for (let r = 0; r < rows; r += 1) {
+            weights.push(new Float32Array(cols));
+          }
+          const biases = new Float32Array(biasLen);
+          return {
+            name: typeof layerMeta?.name === "string" ? layerMeta.name : `dense_${idx}`,
+            activation: typeof layerMeta?.activation === "string" ? layerMeta.activation : "relu",
+            weights,
+            biases,
+          };
+        });
+      }
       neuralModel.updateLayers(layers);
       neuralScene.updateNetworkWeights();
       networkInfoPanel?.update(neuralModel);

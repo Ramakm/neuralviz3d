@@ -2155,7 +2155,9 @@ class NeuralVisualizer {
     const baseGeometry = this.ensureSelectionGeometry();
     const connectionMaterial = new THREE.MeshBasicMaterial({
       toneMapped: false,
+      vertexColors: true,
     });
+    connectionMaterial.vertexColors = true;
 
     const createMesh = (connections) => {
       if (!connections.length) return null;
@@ -2533,7 +2535,9 @@ class NeuralVisualizer {
     );
     const hiddenGeometry = new THREE.SphereGeometry(this.options.hiddenNodeRadius, 16, 16);
     // Test with MeshBasicMaterial for hidden/output neurons (no lighting influence)
-    const hiddenBaseMaterial = new THREE.MeshBasicMaterial();
+    // Enable vertexColors so per-instance colors are applied.
+    const hiddenBaseMaterial = new THREE.MeshBasicMaterial({ vertexColors: true });
+    hiddenBaseMaterial.vertexColors = true;
     hiddenBaseMaterial.toneMapped = false;
 
     const layerCount = this.mlp.architecture.length;
@@ -2547,7 +2551,9 @@ class NeuralVisualizer {
       const isOutputLayer = layerIndex === layerCount - 1;
 
       if (layerIndex === 0) {
-        const material = new THREE.MeshLambertMaterial();
+        // Enable vertex colors so per-instance colors are visible on neurons
+        const material = new THREE.MeshLambertMaterial({ vertexColors: true });
+        material.vertexColors = true;
         material.emissive.setRGB(0.08, 0.08, 0.08);
         const mesh = new THREE.InstancedMesh(inputGeometry, material, neuronCount);
         mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -2714,8 +2720,9 @@ class NeuralVisualizer {
     this.maxConnectionWeightMagnitude = 0;
     const connectionRadius = this.options.connectionRadius ?? 0.005;
     const baseGeometry = new THREE.CylinderGeometry(connectionRadius, connectionRadius, 1, 10, 1, true);
-    const material = new THREE.MeshLambertMaterial();
-    // Do not set vertexColors explicitly; instancing color works independently
+    // Use a material that supports vertex colors so instanceColor is rendered
+    const material = new THREE.MeshLambertMaterial({ vertexColors: true });
+    material.vertexColors = true;
 
     this.mlp.layers.forEach((layer, layerIndex) => {
       const { selected, maxAbsWeight } = this.findImportantConnections(layer);

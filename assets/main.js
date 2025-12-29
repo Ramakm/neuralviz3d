@@ -9,6 +9,10 @@ const VISUALIZER_CONFIG = {
   connectionRadius: 0.005,
   connectionWeightThreshold: 0,
   showFpsOverlay: true,
+  // When true the app uses a lightweight DOM-based fallback visualizer
+  // instead of the Three.js 3D renderer. Useful for environments where
+  // WebGL/three.js isn't available or causes deployment issues.
+  useLegacyRenderer: false,
   brush: {
     drawRadius: 1.4,
     eraseRadius: 2.5,
@@ -234,20 +238,40 @@ async function initializeVisualizer() {
   const networkInfoPanel = networkInfoPanelElement ? new NetworkInfoPanel(networkInfoPanelElement) : null;
   const neuronDetailPanelElement = document.getElementById("neuronDetailPanel");
   const neuronDetailPanel = new NeuronDetailPanel(neuronDetailPanelElement);
-  const neuralScene = new NeuralVisualizer(neuralModel, {
-    layerSpacing: VISUALIZER_CONFIG.layerSpacing,
-    maxConnectionsPerNeuron: VISUALIZER_CONFIG.maxConnectionsPerNeuron,
-    inputSpacing: VISUALIZER_CONFIG.inputSpacing,
-    hiddenSpacing: VISUALIZER_CONFIG.hiddenSpacing,
-    inputNodeSize: VISUALIZER_CONFIG.inputNodeSize,
-    hiddenNodeRadius: VISUALIZER_CONFIG.hiddenNodeRadius,
-    connectionRadius: VISUALIZER_CONFIG.connectionRadius,
-    connectionWeightThreshold: VISUALIZER_CONFIG.connectionWeightThreshold,
-    showFpsOverlay: VISUALIZER_CONFIG.showFpsOverlay,
-    onNeuronFocusChange: (payload) => neuronDetailPanel.update(payload),
-  });
+  // Create either the WebGL-based visualizer or a lightweight DOM fallback
+  // depending on `VISUALIZER_CONFIG.useLegacyRenderer`.
+  let sceneController = null;
+  if (VISUALIZER_CONFIG.useLegacyRenderer) {
+    sceneController = new LegacyVisualizer(neuralModel, {
+      layerSpacing: VISUALIZER_CONFIG.layerSpacing,
+      maxConnectionsPerNeuron: VISUALIZER_CONFIG.maxConnectionsPerNeuron,
+      inputSpacing: VISUALIZER_CONFIG.inputSpacing,
+      hiddenSpacing: VISUALIZER_CONFIG.hiddenSpacing,
+      inputNodeSize: VISUALIZER_CONFIG.inputNodeSize,
+      hiddenNodeRadius: VISUALIZER_CONFIG.hiddenNodeRadius,
+      connectionRadius: VISUALIZER_CONFIG.connectionRadius,
+      connectionWeightThreshold: VISUALIZER_CONFIG.connectionWeightThreshold,
+    });
+  } else {
+    sceneController = new NeuralVisualizer(neuralModel, {
+      layerSpacing: VISUALIZER_CONFIG.layerSpacing,
+      maxConnectionsPerNeuron: VISUALIZER_CONFIG.maxConnectionsPerNeuron,
+      inputSpacing: VISUALIZER_CONFIG.inputSpacing,
+      hiddenSpacing: VISUALIZER_CONFIG.hiddenSpacing,
+      inputNodeSize: VISUALIZER_CONFIG.inputNodeSize,
+      hiddenNodeRadius: VISUALIZER_CONFIG.hiddenNodeRadius,
+      connectionRadius: VISUALIZER_CONFIG.connectionRadius,
+      connectionWeightThreshold: VISUALIZER_CONFIG.connectionWeightThreshold,
+      showFpsOverlay: VISUALIZER_CONFIG.showFpsOverlay,
+      onNeuronFocusChange: (payload) => neuronDetailPanel.update(payload),
+    });
+  }
   networkInfoPanel?.update(neuralModel);
-  neuronDetailPanel.setOnClear(() => neuralScene.clearSelection());
+  neuronDetailPanel.setOnClear(() => {
+    if (sceneController && typeof sceneController.clearSelection === "function") {
+      sceneController.clearSelection();
+    }
+  });
 
   if (gridContainerElement && neuronDetailPanelElement) {
     const rootStyle = document.documentElement?.style ?? null;
@@ -279,8 +303,12 @@ async function initializeVisualizer() {
   }
 
   if (typeof window !== "undefined") {
-    // Expose scene instance for interactive inspection in DevTools.
-    window.neuralScene = neuralScene;
+    // Expose active scene controller instance for interactive inspection in DevTools.
+    try {
+      window.sceneController = sceneController;
+    } catch (_e) {
+      // ignore
+    }
   }
 
   const resetBtn = document.getElementById("resetBtn");
@@ -318,7 +346,9 @@ async function initializeVisualizer() {
       }
     }
 
-    neuralScene.update(displayActivations, networkActivations, propagation.preActivations);
+    if (sceneController && typeof sceneController.update === "function") {
+      sceneController.update(displayActivations, networkActivations, propagation.preActivations);
+    }
     const probabilitiesForPanel = probabilities.length ? probabilities : logitsTyped;
     probabilityPanel.update(probabilitiesForPanel.length ? Array.from(probabilitiesForPanel) : []);
 
@@ -331,7 +361,7 @@ async function initializeVisualizer() {
   });
 
   initializeAdvancedSettings({
-    neuralScene,
+    sceneController,
     digitCanvas,
     onConnectionsSettingsChange() {
       refreshNetworkState();
@@ -367,7 +397,9 @@ async function initializeVisualizer() {
         });
       }
       neuralModel.updateLayers(layers);
-      neuralScene.updateNetworkWeights();
+      if (sceneController && typeof sceneController.updateNetworkWeights === "function") {
+        sceneController.updateNetworkWeights();
+      }
       networkInfoPanel?.update(neuralModel);
       refreshNetworkState();
     },
@@ -407,7 +439,7 @@ function initializeInfoDialog() {
   });
 }
 
-function initializeAdvancedSettings({ neuralScene, digitCanvas, onConnectionsSettingsChange } = {}) {
+function initializeAdvancedSettings({ sceneController, digitCanvas, onConnectionsSettingsChange } = {}) {
   const button = document.getElementById("advancedSettingsButton");
   const modal = document.getElementById("advancedSettingsModal");
   const closeButton = document.getElementById("closeAdvancedSettings");
@@ -467,10 +499,10 @@ function initializeAdvancedSettings({ neuralScene, digitCanvas, onConnectionsSet
     }
   });
 
-  if (connectionSlider && connectionValue && neuralScene) {
+  if (connectionSlider && connectionValue && sceneController) {
     let maxIncoming = 0;
-    if (Array.isArray(neuralScene.mlp?.layers)) {
-      for (const layer of neuralScene.mlp.layers) {
+    if (Array.isArray(sceneController.mlp?.layers)) {
+      for (const layer of sceneController.mlp.layers) {
         if (!layer || !Array.isArray(layer.weights) || !layer.weights.length) continue;
         const rowLength = layer.weights[0]?.length ?? 0;
         if (rowLength > maxIncoming) {
@@ -482,7 +514,7 @@ function initializeAdvancedSettings({ neuralScene, digitCanvas, onConnectionsSet
     connectionSlider.max = String(sliderMax);
 
     const syncConnectionUi = (value) => {
-      const normalized = Number.isFinite(value) ? value : neuralScene.options.maxConnectionsPerNeuron;
+      const normalized = Number.isFinite(value) ? value : sceneController.options.maxConnectionsPerNeuron;
       connectionSlider.value = String(normalized);
       connectionValue.textContent = `${normalized}`;
     };
@@ -490,13 +522,13 @@ function initializeAdvancedSettings({ neuralScene, digitCanvas, onConnectionsSet
     const applyConnectionLimit = (rawValue, { emit = true } = {}) => {
       let parsed = Number.parseInt(rawValue, 10);
       if (!Number.isFinite(parsed)) {
-        parsed = neuralScene.options.maxConnectionsPerNeuron;
+        parsed = sceneController.options.maxConnectionsPerNeuron;
       }
       const maxValue = Number.parseInt(connectionSlider.max, 10) || sliderMax;
       const clamped = Math.min(maxValue, Math.max(1, parsed));
       syncConnectionUi(clamped);
       if (!emit) return;
-      const changed = neuralScene.setMaxConnectionsPerNeuron(clamped);
+      const changed = sceneController.setMaxConnectionsPerNeuron(clamped);
       if (changed) {
         if (typeof onConnectionsSettingsChange === "function") {
           onConnectionsSettingsChange(clamped);
@@ -505,7 +537,7 @@ function initializeAdvancedSettings({ neuralScene, digitCanvas, onConnectionsSet
       }
     };
 
-    applyConnectionLimit(neuralScene.options.maxConnectionsPerNeuron, { emit: false });
+    applyConnectionLimit(sceneController.options.maxConnectionsPerNeuron, { emit: false });
 
     connectionSlider.addEventListener("input", (event) => {
       applyConnectionLimit(event.target.value);
@@ -521,19 +553,19 @@ function initializeAdvancedSettings({ neuralScene, digitCanvas, onConnectionsSet
     }
   }
 
-  if (connectionThresholdSlider && connectionThresholdValue && neuralScene) {
+  if (connectionThresholdSlider && connectionThresholdValue && sceneController) {
     const min = Math.max(0, Number.parseFloat(connectionThresholdSlider.min) || 0);
     const fallbackMaxAttr = Number.parseFloat(connectionThresholdSlider.getAttribute("max"));
     const computeSceneMaxMagnitude = () => {
-      if (typeof neuralScene.getMaxConnectionWeightMagnitude === "function") {
-        const sceneValue = neuralScene.getMaxConnectionWeightMagnitude();
+      if (typeof sceneController.getMaxConnectionWeightMagnitude === "function") {
+        const sceneValue = sceneController.getMaxConnectionWeightMagnitude();
         if (Number.isFinite(sceneValue)) {
           return sceneValue;
         }
       }
       let maxMagnitude = 0;
-      if (Array.isArray(neuralScene.mlp?.layers)) {
-        for (const layer of neuralScene.mlp.layers) {
+      if (Array.isArray(sceneController.mlp?.layers)) {
+        for (const layer of sceneController.mlp.layers) {
           if (!Array.isArray(layer?.weights)) continue;
           for (const row of layer.weights) {
             if (!Array.isArray(row)) continue;
@@ -570,12 +602,12 @@ function initializeAdvancedSettings({ neuralScene, digitCanvas, onConnectionsSet
       const max = updateThresholdSliderBounds();
       let parsed = Number.parseFloat(rawValue);
       if (!Number.isFinite(parsed)) {
-        parsed = neuralScene.options.connectionWeightThreshold ?? 0;
+        parsed = sceneController.options.connectionWeightThreshold ?? 0;
       }
       const clamped = clamp(parsed, min, max);
       syncThresholdUi(clamped);
       if (!emit) return;
-      const changed = neuralScene.setConnectionWeightThreshold(clamped);
+      const changed = sceneController.setConnectionWeightThreshold(clamped);
       if (changed) {
         VISUALIZER_CONFIG.connectionWeightThreshold = clamped;
         if (typeof onConnectionsSettingsChange === "function") {
@@ -583,8 +615,8 @@ function initializeAdvancedSettings({ neuralScene, digitCanvas, onConnectionsSet
         }
       }
     };
-    const initialThreshold = Number.isFinite(neuralScene.options.connectionWeightThreshold)
-      ? Math.max(min, neuralScene.options.connectionWeightThreshold)
+    const initialThreshold = Number.isFinite(sceneController.options.connectionWeightThreshold)
+      ? Math.max(min, sceneController.options.connectionWeightThreshold)
       : Math.max(min, VISUALIZER_CONFIG.connectionWeightThreshold);
     updateThresholdSliderBounds();
     applyConnectionThreshold(initialThreshold, { emit: false });
@@ -606,7 +638,7 @@ function initializeAdvancedSettings({ neuralScene, digitCanvas, onConnectionsSet
     }
   }
 
-  if (connectionThicknessSlider && connectionThicknessValue && neuralScene) {
+  if (connectionThicknessSlider && connectionThicknessValue && sceneController) {
     const min = Number.parseFloat(connectionThicknessSlider.min) || 0.001;
     const max = Number.parseFloat(connectionThicknessSlider.max) || 0.1;
     const formatThickness = (value) => `${value.toFixed(3)}`;
@@ -617,18 +649,18 @@ function initializeAdvancedSettings({ neuralScene, digitCanvas, onConnectionsSet
     const applyConnectionThickness = (rawValue, { emit = true } = {}) => {
       let parsed = Number.parseFloat(rawValue);
       if (!Number.isFinite(parsed)) {
-        parsed = neuralScene.options.connectionRadius;
+        parsed = sceneController.options.connectionRadius;
       }
       const clamped = clamp(parsed, min, max);
       syncConnectionThicknessUi(clamped);
       if (!emit) return;
-      const changed = neuralScene.setConnectionRadius(clamped);
+      const changed = sceneController.setConnectionRadius(clamped);
       if (changed) {
         VISUALIZER_CONFIG.connectionRadius = clamped;
       }
     };
-    const initialRadius = Number.isFinite(neuralScene.options.connectionRadius)
-      ? clamp(neuralScene.options.connectionRadius, min, max)
+    const initialRadius = Number.isFinite(sceneController.options.connectionRadius)
+      ? clamp(sceneController.options.connectionRadius, min, max)
       : clamp(VISUALIZER_CONFIG.connectionRadius, min, max);
     applyConnectionThickness(initialRadius, { emit: false });
 
@@ -2969,6 +3001,98 @@ class NeuralVisualizer {
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+// Lightweight DOM-based visualizer used as an optional fallback when WebGL
+// rendering via Three.js is unavailable or problematic in the deployment.
+class LegacyVisualizer {
+  constructor(mlp, options = {}) {
+    this.mlp = mlp;
+    this.options = Object.assign(
+      {
+        layerSpacing: 5.5,
+        inputSpacing: 0.24,
+        hiddenSpacing: 0.95,
+        inputNodeSize: 0.18,
+        hiddenNodeRadius: 0.22,
+        maxConnectionsPerNeuron: 24,
+        connectionRadius: 0.005,
+        connectionWeightThreshold: 0,
+      },
+      options || {},
+    );
+
+    this.root = document.createElement("div");
+    this.root.id = "legacyVisualizer";
+    this.root.className = "legacy-visualizer";
+    document.body.appendChild(this.root);
+
+    this.layerElements = [];
+    this.buildLayers();
+  }
+
+  buildLayers() {
+    this.root.innerHTML = "";
+    const wrapper = document.createElement("div");
+    wrapper.className = "legacy-visualizer__wrapper";
+    this.root.appendChild(wrapper);
+
+    const arch = Array.isArray(this.mlp.architecture) ? this.mlp.architecture : [];
+    arch.forEach((count, layerIndex) => {
+      const col = document.createElement("div");
+      col.className = "legacy-layer";
+      const neurons = [];
+      for (let i = 0; i < count; i += 1) {
+        const n = document.createElement("div");
+        n.className = "legacy-neuron";
+        col.appendChild(n);
+        neurons.push(n);
+      }
+      wrapper.appendChild(col);
+      this.layerElements.push({ col, neurons });
+    });
+  }
+
+  update(displayActivations = [], networkActivations = [], preActivations = []) {
+    // Color neurons based on displayActivations (0..1) for input layer
+    for (let layerIndex = 0; layerIndex < this.layerElements.length; layerIndex += 1) {
+      const layerEl = this.layerElements[layerIndex];
+      const values = displayActivations[layerIndex] || [];
+      for (let i = 0; i < layerEl.neurons.length; i += 1) {
+        const nodeEl = layerEl.neurons[i];
+        const v = Number(values[i]) || 0;
+        const intensity = Math.max(0, Math.min(1, v));
+        const light = 12 + Math.round(intensity * 60);
+        const alpha = 0.08 + intensity * 0.9;
+        nodeEl.style.background = `rgba(0, 245, 160, ${alpha})`;
+        nodeEl.style.boxShadow = intensity > 0 ? `0 0 ${6 + intensity * 18}px rgba(0,245,160,${Math.min(0.45, alpha)})` : "none";
+      }
+    }
+  }
+
+  updateNetworkWeights() {
+    // No-op for legacy visualizer; weights are not rendered as lines here.
+  }
+
+  setMaxConnectionsPerNeuron() {
+    return false;
+  }
+
+  setConnectionRadius() {
+    return false;
+  }
+
+  setConnectionWeightThreshold() {
+    return false;
+  }
+
+  getMaxConnectionWeightMagnitude() {
+    return 0;
+  }
+
+  clearSelection() {
+    // no selection in legacy view
+  }
 }
 
 function softmax(values) {

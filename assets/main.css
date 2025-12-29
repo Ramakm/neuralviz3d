@@ -1232,3 +1232,40 @@ button {
     font-size: 1rem;
   }
 }
+
+/* Legacy visualizer styles (fallback for non-WebGL environments) */
+.legacy-visualizer {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.legacy-visualizer__wrapper {
+  display: flex;
+  gap: 18px;
+  padding: 24px;
+  background: rgba(10, 16, 30, 0.6);
+  border: 1px solid rgba(255,255,255,0.03);
+  border-radius: 14px;
+  box-shadow: var(--shadow-card);
+}
+.legacy-layer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  padding: 6px;
+}
+.legacy-neuron {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: rgba(230,237,243,0.03);
+  transition: all 0.12s ease;
+}
+

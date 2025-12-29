@@ -6,7 +6,7 @@ const VISUALIZER_CONFIG = {
   hiddenSpacing: 0.95,
   inputNodeSize: 0.18,
   hiddenNodeRadius: 0.22,
-  connectionRadius: 0.005,
+  connectionRadius: 0.0028,
   connectionWeightThreshold: 0,
   showFpsOverlay: true,
   // When true the app uses a lightweight DOM-based fallback visualizer
@@ -1950,7 +1950,8 @@ class NeuralVisualizer {
         inputNodeSize: 0.18,
         hiddenNodeRadius: 0.22,
         maxConnectionsPerNeuron: 24,
-        connectionRadius: 0.005,
+        // slightly thinner default connections for clarity
+        connectionRadius: 0.0028,
         connectionWeightThreshold: 0,
         outputLabelOffset: 0.65,
         outputLabelScale: 0.48,
@@ -1996,6 +1997,8 @@ class NeuralVisualizer {
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
     this.renderer.setPixelRatio(window.devicePixelRatio);
     this.renderer.setSize(window.innerWidth, window.innerHeight);
+    this.renderer.domElement.style.position = 'fixed';
+    this.renderer.domElement.style.inset = '0';
     document.body.appendChild(this.renderer.domElement);
     this.fpsMonitor = this.options.showFpsOverlay ? new FpsMonitor() : null;
 
@@ -2003,7 +2006,8 @@ class NeuralVisualizer {
     this.scene.add(this.labelGroup);
 
     this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 200);
-    this.camera.position.set(-15, 0, 15);
+    // Position camera slightly further back and above for a wide view similar to the screenshot
+    this.camera.position.set(-18, 6, 18);
 
     this.controls = new THREE.OrbitControls(this.camera, this.renderer.domElement);
     this.controls.enableDamping = true;
@@ -2012,20 +2016,21 @@ class NeuralVisualizer {
     this.controls.maxDistance = 52;
     this.controls.target.set(0, 0, 0);
 
-    const ambient = new THREE.AmbientLight(0xffffff, 1.2);
+    // Softer, more directional lighting to create the silhouette + rim effect
+    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
     this.scene.add(ambient);
-    const hemisphere = new THREE.HemisphereLight(0xffffff, 0x1a1d2e, 0.9);
+    const hemisphere = new THREE.HemisphereLight(0x99b7ff, 0x0b1b2d, 0.35);
     hemisphere.position.set(0, 20, 0);
     this.scene.add(hemisphere);
-    const directional = new THREE.DirectionalLight(0xffffff, 1.4);
-    directional.position.set(18, 26, 24);
-    directional.castShadow = true;
+    const directional = new THREE.DirectionalLight(0xffffff, 1.0);
+    directional.position.set(24, 36, 20);
+    directional.castShadow = false;
     this.scene.add(directional);
-    const fillLight = new THREE.DirectionalLight(0xa8c5ff, 0.8);
-    fillLight.position.set(-20, 18, -18);
+    const fillLight = new THREE.DirectionalLight(0x88c6ff, 0.45);
+    fillLight.position.set(-24, 18, -18);
     this.scene.add(fillLight);
-    const rimLight = new THREE.PointLight(0x88a4ff, 0.6, 60, 1.6);
-    rimLight.position.set(0, 12, -24);
+    const rimLight = new THREE.PointLight(0x88a4ff, 0.9, 80, 1.6);
+    rimLight.position.set(0, 24, -36);
     this.scene.add(rimLight);
 
     this.renderer.domElement.addEventListener("pointerdown", (event) => this.handleScenePointerDown(event));

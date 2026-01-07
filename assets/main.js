@@ -885,6 +885,10 @@ function normaliseWeightsDescriptor(descriptor, baseUrl) {
 async function fetchSnapshotPayload(url) {
   const response = await fetch(url, { cache: "no-store" });
   if (!response.ok) {
+    // Silently handle 404s - they'll be caught and handled by fallback logic
+    if (response.status === 404) {
+      throw new Error(`Snapshot file not found (404)`);
+    }
     throw new Error(`Could not load snapshot (${response.status})`);
   }
   return response.json();
@@ -939,6 +943,7 @@ function hydrateTimeline(rawTimeline, options = {}) {
   );
 
   const baseUrl = options.baseUrl ?? window.location.href;
+  const definitionUrl = baseUrl.toString();
 
   return rawTimeline
     .map((entry, index) => {
@@ -969,7 +974,31 @@ function hydrateTimeline(rawTimeline, options = {}) {
           if (Array.isArray(this.layers) && this.layers.length) {
             return this.layers;
           }
-          const payload = await fetchSnapshotPayload(this.weights.url);
+          // Check if the snapshot URL is the same as the definition URL (embedded weights)
+          const snapshotUrl = this.weights.url;
+          let payload;
+          try {
+            // Try to fetch the snapshot payload
+            payload = await fetchSnapshotPayload(snapshotUrl);
+            // If it's the same file as the definition and has embedded layers, use those
+            if (snapshotUrl === definitionUrl && payload && Array.isArray(payload.layers) && payload.layers.length > 0) {
+              // Use the embedded layers directly
+            } else if (!payload || !Array.isArray(payload.layers) || payload.layers.length === 0) {
+              // If payload doesn't have layers, try fetching the definition
+              const definition = await fetchNetworkDefinition(definitionUrl);
+              if (definition && Array.isArray(definition.layers) && definition.layers.length > 0) {
+                payload = definition;
+              }
+            }
+          } catch (err) {
+            // If fetching snapshot fails, try the definition file
+            const definition = await fetchNetworkDefinition(definitionUrl);
+            if (definition && Array.isArray(definition.layers) && definition.layers.length > 0) {
+              payload = definition;
+            } else {
+              throw err;
+            }
+          }
           this.layers = decodeSnapshotLayers(payload, layerMetadata);
           return this.layers;
         },

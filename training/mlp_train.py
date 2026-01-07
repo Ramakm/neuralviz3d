@@ -4,6 +4,7 @@ Supports Apple Metal (MPS), CUDA, and CPU acceleration.
 """
 
 import argparse
+import base64
 import json
 import os
 from pathlib import Path
@@ -118,52 +119,105 @@ def evaluate(model, test_loader, criterion, device):
     return avg_loss, accuracy
 
 
-def export_weights(model, output_path, hidden_dims):
+def float32_to_float16_bytes(arr):
+    """Convert float32 numpy array to float16 bytes for base64 encoding."""
+    # Convert to float16
+    arr_f16 = arr.astype(np.float16)
+    # Get bytes in little-endian format
+    return arr_f16.tobytes()
+
+
+def export_weights(model, output_path, hidden_dims, test_accuracy=None):
     """Export model weights to JSON format for visualization."""
     model.eval()
     
     # Extract layers (skip ReLU layers)
     dense_layers = [m for m in model.network if isinstance(m, nn.Linear)]
     
-    # Build layer metadata and weights
-    layers = []
+    # Build layer metadata
+    layer_metadata = []
+    snapshot_layers = []
+    
     for idx, layer in enumerate(dense_layers):
         # Determine activation
         if idx < len(dense_layers) - 1:
             activation = "relu"
         else:
-            activation = "none"
+            activation = "linear"  # Changed from "none" to "linear" to match expected format
         
         # Get weights and biases as numpy arrays
-        weights = layer.weight.detach().cpu().numpy().tolist()
-        bias = layer.bias.detach().cpu().numpy().tolist()
+        weights_np = layer.weight.detach().cpu().numpy().astype(np.float32)
+        bias_np = layer.bias.detach().cpu().numpy().astype(np.float32)
         
-        layer_data = {
+        # Convert to float16 and encode as base64
+        weights_bytes = float32_to_float16_bytes(weights_np)
+        bias_bytes = float32_to_float16_bytes(bias_np)
+        weights_b64 = base64.b64encode(weights_bytes).decode('ascii')
+        bias_b64 = base64.b64encode(bias_bytes).decode('ascii')
+        
+        # Layer metadata (for network definition)
+        layer_meta = {
             "layer_index": idx,
             "type": "dense",
             "name": f"dense_{idx}",
             "activation": activation,
             "weight_shape": list(layer.weight.shape),
-            "bias_shape": list(layer.bias.shape),
-            "weights": weights,
-            "bias": bias
+            "bias_shape": list(layer.bias.shape)
         }
+        layer_metadata.append(layer_meta)
         
-        layers.append(layer_data)
+        # Snapshot layer data (with encoded weights)
+        snapshot_layer = {
+            "layer_index": idx,
+            "type": "dense",
+            "name": f"dense_{idx}",
+            "activation": activation,
+            "weights": {
+                "shape": list(layer.weight.shape),
+                "data": weights_b64
+            },
+            "bias": {
+                "shape": list(layer.bias.shape),
+                "data": bias_b64
+            }
+        }
+        snapshot_layers.append(snapshot_layer)
     
-    # Build complete export structure
-    export_data = {
+    # Build network definition
+    network_def = {
         "version": 2,
-        "dtype": "float32",
+        "dtype": "float16",
+        "weights": {
+            "storage": "embedded",
+            "format": "layer_array_v1",
+            "precision": "float16"
+        },
         "network": {
             "architecture": [784] + list(hidden_dims) + [10],
             "normalization": {
                 "mean": MNIST_MEAN,
                 "std": MNIST_STD
             },
-            "layers": layers
+            "layers": layer_metadata
         },
-        "timeline": []  # Can be extended for training progress visualization
+        "timeline": [
+            {
+                "id": "trained",
+                "order": 0,
+                "label": "Trained Model",
+                "kind": "final",
+                "description": "Trained model weights",
+                "metrics": {
+                    "test_accuracy": test_accuracy if test_accuracy is not None else 0.0
+                },
+                "weights": {
+                    "path": output_path.name,  # Reference to this same file by filename
+                    "dtype": "float16",
+                    "format": "layer_array_v1"
+                }
+            }
+        ],
+        "layers": snapshot_layers  # Embedded snapshot data (loaded when timeline entry references this file)
     }
     
     # Ensure output directory exists
@@ -171,11 +225,13 @@ def export_weights(model, output_path, hidden_dims):
     
     # Write to file
     with open(output_path, 'w') as f:
-        json.dump(export_data, f, indent=2)
+        json.dump(network_def, f, indent=2)
     
     print(f"\n✓ Weights exported to: {output_path}")
-    print(f"  - Architecture: {export_data['network']['architecture']}")
-    print(f"  - Total layers: {len(layers)}")
+    print(f"  - Architecture: {network_def['network']['architecture']}")
+    print(f"  - Total layers: {len(layer_metadata)}")
+    if test_accuracy is not None:
+        print(f"  - Test accuracy: {test_accuracy * 100:.2f}%")
 
 
 def main():
@@ -251,7 +307,7 @@ def main():
     # Export weights
     print(f"\n💾 Exporting model weights...")
     export_path = Path(args.export_path)
-    export_weights(model, export_path, args.hidden_dims)
+    export_weights(model, export_path, args.hidden_dims, test_acc)
     
     print(f"\n✅ Training complete!")
     print(f"  - Best test accuracy: {best_accuracy * 100:.2f}%")
